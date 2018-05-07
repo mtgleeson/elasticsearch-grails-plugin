@@ -70,6 +70,9 @@ class ClientNodeFactoryBean implements FactoryBean {
             LOG.info "Using ElasticSearch data path: ${dataPath}"
         }
 
+        // define the list of plugins that will be applied during the creation of the Node
+        List<Class<? extends Plugin>> plugins = []
+
         // Configure the client based on the client mode
         switch (clientMode) {
             case 'transport':
@@ -187,7 +190,12 @@ class ClientNodeFactoryBean implements FactoryBean {
 
             case 'node':
             default:
-                settings.put("node.client", true)
+                settings.put("node.data", false)
+                settings.put("node.master", false)
+
+                // define the transport mechanism to communicating to other nodes. Needed since Elasticsearch 5.* since
+                // the transport mechnism was extracted out of Elasticsearch core
+                plugins << (Class<? extends Plugin>)elasticSearchContextHolder.config.plugin.transport
                 break
         }
         if (transportClient) {
@@ -202,7 +210,11 @@ class ClientNodeFactoryBean implements FactoryBean {
         }
 
         if(elasticSearchContextHolder.config.plugin.mapperAttachment.enabled) {
-            node = new PluginEnabledNode(settings, org.elasticsearch.mapper.attachments.MapperAttachmentsPlugin)
+            plugins << org.elasticsearch.mapper.attachments.MapperAttachmentsPlugin
+        }
+
+        if(plugins.size() > 0) {
+            node = new PluginEnabledNode(settings, plugins)
         } else {
             node = new Node(settings.build())
         }
@@ -248,8 +260,8 @@ class ClientNodeFactoryBean implements FactoryBean {
     }
 
     private static class PluginEnabledNode extends Node {
-        PluginEnabledNode(Settings.Builder settings, Class<? extends Plugin> ... plugins) {
-            super(InternalSettingsPreparer.prepareEnvironment(settings.build(), null), plugins as List<Plugin>)
+        PluginEnabledNode(Settings.Builder settings, List<Class<? extends Plugin>> plugins) {
+            super(InternalSettingsPreparer.prepareEnvironment(settings.build(), null), plugins)
         }
     }
 }

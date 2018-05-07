@@ -91,6 +91,12 @@ elasticSearch {
     countHitsMethodName = "countHits"
 
     plugin.mapperAttachment.enabled = true
+
+    /**
+     * Used for 'Node' mode. Define the transport mechanism to communicating to other nodes.
+     * The transport has been separated out the core Elasticsearch module.
+     */
+    plugin.transport = org.elasticsearch.transport.Netty4Plugin
 }
 
 environments {
